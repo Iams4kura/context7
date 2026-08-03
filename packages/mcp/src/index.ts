@@ -12,7 +12,7 @@ import { z } from "zod";
 import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
 import type { ClientContext } from "./lib/types.js";
 import { formatSearchResults, extractClientInfoFromUserAgent } from "./lib/utils.js";
-import { isJWT, validateJWT } from "./lib/jwt.js";
+import { isApiKeyFormat, isJWT, validateJWT } from "./lib/jwt.js";
 import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
@@ -431,6 +431,16 @@ async function main() {
                 id: null,
               });
             }
+          } else if (!isApiKeyFormat(apiKey)) {
+            // Anything that is neither a JWT nor an API key would previously
+            // fall through unchecked and open a session on the endpoint that
+            // advertises authentication. The key itself is still verified
+            // upstream; this only stops arbitrary strings getting that far.
+            return res.status(401).json({
+              jsonrpc: "2.0",
+              error: { code: -32001, message: "Invalid token. Please re-authenticate." },
+              id: null,
+            });
           }
         }
 
